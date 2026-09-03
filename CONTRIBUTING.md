@@ -3,6 +3,53 @@
 - Please follow common guidelines for our projects [here](https://github.com/packit/contributing).
 - Once you are done, please check out our [COMPATIBILITY.md](https://github.com/packit/ogr/blob/main/COMPATIBILITY.md) file and include your changes here (if necessary).
 
+## About ogr
+
+`ogr` provides one Python API for multiple git forges: GitHub, GitLab,
+Pagure, and Forgejo. It lets consumers write forge-agnostic code against the
+abstract interfaces in `ogr/abstract/`, while each forge has its own concrete
+implementation.
+
+## Architecture
+
+`ogr` separates its public, forge-agnostic API from the code that talks to a
+specific forge. Consumers should normally work with the abstract interfaces,
+not with a GitHub-, GitLab-, Pagure-, or Forgejo-specific class. This keeps a
+consumer's code portable across forges and makes unsupported operations
+explicit rather than silently relying on one forge's behavior.
+
+The main parts of the codebase are:
+
+- `ogr/abstract/` contains the public abstract base classes, including
+  `GitProject`, `GitService`, `PullRequest`, `Issue`, and `Release`. These
+  classes define the common contract and documentation for operations that can
+  be supported across forges.
+- `ogr/services/github/`, `ogr/services/gitlab/`,
+  `ogr/services/pagure/`, and `ogr/services/forgejo/` contain concrete
+  implementations of the abstract API. Forge-specific request formats,
+  response handling, and capability differences belong in these directories.
+- `ogr/factory.py` provides the usual forge-agnostic entry points:
+  `get_project` creates a project object and `get_service_class` selects the
+  matching service implementation from a URL or forge type.
+- `ogr/exceptions.py`, `ogr/read_only.py`, `ogr/parsing.py`, and
+  `ogr/utils.py` provide cross-cutting functionality shared by services, such
+  as exceptions, read-only behavior, parsing helpers, and general utilities.
+
+### Adding or changing an API operation
+
+When adding behavior that should work across forges, start by defining the
+method and its semantics on the appropriate class in `ogr/abstract/`. Then
+implement that contract in every service that supports it. If a forge cannot
+provide the operation, make that limitation explicit and use the established
+exception or capability pattern instead of adding a forge-specific shortcut to
+the public API.
+
+Keep implementation details inside the relevant service package. A change to a
+GitHub API endpoint, for example, belongs under `ogr/services/github/`, while
+the public method signature and documented behavior belong in `ogr/abstract/`.
+This division is the main guardrail that prevents forge-specific behavior from
+leaking into consumer code.
+
 ## Reporting Bugs
 
 - [List of known issues](https://github.com/packit/ogr/issues) and in case you need to create a new issue, you can do so [here](https://github.com/packit/ogr/issues/new).
